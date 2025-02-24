@@ -154,11 +154,16 @@ class Vector:
         This method generates a hash value by applying the XOR operation
         to the hash values of the elements in the object.
 
+        This method generates a position-sensitive hash value by combining
+        each element's hash with its position in the vector. This ensures
+        that vectors with the same elements in different positions have
+        different hash values.
+
         Returns:
             int: The computed hash value.
         """
-        hases = (hash(x) for x in self)
-        return functools.reduce(operator.xor, hases, 0)
+        hashes = (hash(x) * (i + 1) for i, x in enumerate(self))
+        return functools.reduce(operator.xor, hashes, 0)
 
     def __abs__(self) -> float:
         """Return the magnitude of the vector.
@@ -331,4 +336,4 @@ class Vector:
         """
         typecode = chr(octets[0])
         memv = memoryview(octets[1:]).cast(typecode)  # type: ignore
-        return cls(*memv)
+        return cls(memv)

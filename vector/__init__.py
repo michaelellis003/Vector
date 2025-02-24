@@ -8,6 +8,6 @@ Attributes:
         `import *`.
 """
 
-from vector import Vector
+from .vector import Vector
 
 __all__ = ['Vector']
