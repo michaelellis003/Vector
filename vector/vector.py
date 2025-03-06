@@ -1,6 +1,6 @@
 """This module provides a class to represent n-dimensional vectors.
 
-The bulk of this code is from chapter 13
+The bulk of this code is from chapter 13 and chapter 16
 of the 2nd edition of Fluent Python by Luciano Ramalho.
 
 Classes:
@@ -13,6 +13,7 @@ import math
 import operator
 import reprlib
 from array import array
+from collections import abc
 from collections.abc import Iterable
 from typing import Any
 
@@ -63,6 +64,22 @@ class Vector:
             Format the vector according to the given format specification.
         frombytes(cls, octets: bytes) -> 'Vector':
             Create a Vector instance from a bytes object.
+        __neg__(self):
+            Return the negation of the vector.
+        __pos__(self):
+            Return the vector itself.
+        __add__(self, other):
+            Return the sum of two vectors.
+        __radd__(self, other):
+            Return the sum of two vectors.
+        __mul__(self, scalar):
+            Return the product of the vector and a scalar.
+        __rmul__(self, scalar):
+            Implements the right multiplication operation for the vector.
+        __matmul__(self, other):
+            Implements dot product for two vectors using the @ infix operator.
+        __rmatmul__(self, other):
+            Implements dot product for two vectors.
     """
 
     typecode = 'd'
@@ -137,16 +154,20 @@ class Vector:
     def __eq__(self, other):
         """Check if two vectors are equal.
 
+        An example of Goose typing. Relies on runtime type checking of objects
+        against ABCs.
+
         Args:
             other (Vector): The vector to compare with.
 
         Returns:
             bool: True if the vectors have the same length and all
-                corresponding elements are equal, False otherwise.
+            corresponding elements are equal, False otherwise.
         """
-        return len(self) == len(other) and all(
-            a == b for a, b in zip(self, other, strict=True)
-        )
+        if isinstance(other, Vector):
+            return all(a == b for a, b in zip(self, other, strict=True))
+        else:
+            return NotImplemented
 
     def __hash__(self):
         """Compute the hash value for the object.
@@ -337,3 +358,128 @@ class Vector:
         typecode = chr(octets[0])
         memv = memoryview(octets[1:]).cast(typecode)  # type: ignore
         return cls(memv)
+
+    # Operator overloading with unary operators. Special methods implementing
+    # unary operators should never change the value of the operands. Always
+    # return a new object.
+    def __neg__(self):
+        """Return the negation of the vector.
+
+        This method returns a new vector where each component is the negation
+        of the corresponding component in the original vector.
+
+        Returns:
+            Vector: A new vector with each component negated.
+        """
+        return Vector(-x for x in self)
+
+    def __pos__(self):
+        """Return the vector itself.
+
+        This method returns the vector itself.
+
+        Returns:
+            Vector: The vector itself.
+        """
+        return self
+
+    # Operator overloading with infix operators. Special methods implementing
+    # unary operators should never change the value of the operands. Always
+    # return a new object.
+    def __add__(self, other):
+        """Return the sum of two vectors.
+
+        Args:
+            other (Vector): The vector to add.
+
+        Returns:
+            Vector: A new vector with the sum of the two vectors.
+        """
+        try:
+            pairs = itertools.zip_longest(self, other, fillvalue=0.0)
+            return Vector(a + b for a, b in pairs)
+        except TypeError:
+            return NotImplemented
+
+    def __radd__(self, other):
+        """Return the sum of two vectors.
+
+        Logic for when __radd__ is called:
+
+        1. If a has __add__ method, call a.__add__(b) and return the result
+        unless the result is NotImplemented.
+
+        2. If a does not have __add__ method or calling it returns
+        NotImplemented, check if b has __radd__ method, and call b.__radd__(a)
+        and return the result unless the result is NotImplemented.
+
+        3. If b doesn't have __radd__ method or calling it returns
+        NotImplemented, raise TypeError with an unsupported operand
+        type message.
+
+        Args:
+            other (Vector): The vector to add.
+
+        Returns:
+            Vector: A new vector with the sum of the two vectors.
+        """
+        return self + other
+
+    def __mul__(self, scalar):
+        """Return the product of the vector and a scalar.
+
+        Args:
+            scalar (float): The scalar to multiply by.
+
+        Returns:
+            Vector: A new vector with each component multiplied by the scalar.
+        """
+        try:
+            factor = float(scalar)
+        except ValueError:
+            return NotImplemented
+        return Vector(x * factor for x in self)
+
+    def __rmul__(self, scalar):
+        """Implements the right multiplication operation for the vector.
+
+        Args:
+            scalar (float or int): The scalar value to multiply with the
+            vector.
+
+        Returns:
+            Vector: A new vector that is the result of the scalar
+                multiplication.
+        """
+        return self * scalar
+
+    def __matmul__(self, other):
+        """Implements dot product for two vectors using the @ infix operator.
+
+        Uses "Goose typing". Relies on runtime type checking of objects
+        against ABCs.
+
+        Args:
+            other (Vector): The vector to multiply with.
+
+        Returns:
+            float: The result the dot product of the two vectors.
+        """
+        if isinstance(other, abc.Sized) and isinstance(other, abc.Iterable):
+            return sum(a * b for a, b in zip(self, other, strict=True))
+        else:
+            return NotImplemented
+
+    def __rmatmul__(self, other):
+        """Implements dot product for two vectors.
+
+        Uses "Goose typing". Relies on runtime type checking of objects
+        against ABCs.
+
+        Args:
+            other (Vector): The vector to multiply with.
+
+        Returns:
+            float: The result the dot product of the two vectors.
+        """
+        return self @ other
