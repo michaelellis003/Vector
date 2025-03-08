@@ -13,7 +13,7 @@ import math
 import operator
 import reprlib
 from array import array
-from collections.abc import Iterable, Iterator, Sized
+from collections.abc import Iterable, Iterator, Sequence, Sized
 from typing import Any
 
 
@@ -387,11 +387,11 @@ class Vector:
     # Operator overloading with infix operators. Special methods implementing
     # unary operators should never change the value of the operands. Always
     # return a new object.
-    def __add__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
+    def __add__(self, other: 'Vector' | Sequence[float]) -> 'Vector':
         """Return the sum of two vectors.
 
         Args:
-            other (Vector | Iterable): The vector to add.
+            other (Vector | Sequence): The vector to add.
 
         Returns:
             Vector: A new vector with the sum of the two vectors.
@@ -402,7 +402,7 @@ class Vector:
         except TypeError:
             return NotImplemented
 
-    def __radd__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
+    def __radd__(self, other: 'Vector' | Sequence[float]) -> 'Vector':
         """Return the sum of two vectors.
 
         Logic for when __radd__ is called:
@@ -419,7 +419,7 @@ class Vector:
         type message.
 
         Args:
-            other (Vector | Iterable): The vector to add.
+            other (Vector | Sequence): The vector to add.
 
         Returns:
             Vector: A new vector with the sum of the two vectors.
@@ -455,14 +455,14 @@ class Vector:
         """
         return self * scalar
 
-    def __matmul__(self, other: 'Vector' | Iterable[float]) -> float:
+    def __matmul__(self, other: 'Vector' | Sequence[float]) -> float:
         """Implements dot product for two vectors using the @ infix operator.
 
         Uses "Goose typing". Relies on runtime type checking of objects
         against ABCs.
 
         Args:
-            other (Vector | Iterable): The vector to multiply with.
+            other (Vector | Sequence): The vector to multiply with.
 
         Returns:
             float: The result the dot product of the two vectors.
@@ -472,14 +472,14 @@ class Vector:
         else:
             return NotImplemented
 
-    def __rmatmul__(self, other: 'Vector' | Iterable[float]) -> float:
+    def __rmatmul__(self, other: 'Vector' | Sequence[float]) -> float:
         """Implements dot product for two vectors.
 
         Uses "Goose typing". Relies on runtime type checking of objects
         against ABCs.
 
         Args:
-            other (Vector | Iterable): The vector to multiply with.
+            other (Vector | Sequence): The vector to multiply with.
 
         Returns:
             float: The result the dot product of the two vectors.

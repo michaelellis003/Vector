@@ -1,193 +1,287 @@
-"""This module contains unit tests for the Vector class.
+"""Unit tests for the Vector class.
 
-The tests cover various aspects of the Vector class, including:
-- Initialization and basic properties
-- String representations
-- Iteration and unpacking
-- Equality comparison
-- Magnitude calculation
-- Boolean evaluation
-- Indexing and slicing
-- Attribute access (x, y, z, t)
-- Angle calculations
-- Formatting options
-- Serialization and deserialization
-- Hashing
-- Error conditions
-
-The tests use the pytest framework for assertions and test organization.
+This module contains tests for all functionality of the n-dimensional Vector class.
 """
 
 import math
+import pickle
+from array import array
 
 import pytest
 
 from vector import Vector
 
 
-def test_vector_creation():
-    """Test vector initialization and basic properties."""
-    v = Vector([3.0, 4.0])
-    assert len(v) == 2
-    assert v.x == 3.0
-    assert v.y == 4.0
+class TestVectorBasics:
+    """Test basic Vector functionality."""
 
-    # Test creation with different types of iterables
-    v1 = Vector((1, 2, 3))
-    assert len(v1) == 3
-    v2 = Vector(range(5))
-    assert len(v2) == 5
+    def test_constructor(self):
+        """Test Vector constructor with different inputs."""
+        v1 = Vector([3, 4, 5])
+        assert len(v1) == 3
+        assert v1._components == array('d', [3.0, 4.0, 5.0])
 
+        v2 = Vector([])
+        assert len(v2) == 0
 
-def test_vector_representation():
-    """Test string representations of vectors."""
-    v = Vector([3.0, 4.0, 5.0])
-    assert str(v) == '(3.0, 4.0, 5.0)'
-    assert repr(v) == 'Vector([3.0, 4.0, 5.0])'
+        v3 = Vector(range(10))
+        assert len(v3) == 10
+        assert v3._components == array('d', list(range(10)))
 
-    # Test repr truncation for long vectors
-    v_long = Vector(range(10))
-    assert '...' in repr(v_long)
+    def test_repr(self):
+        """Test string representation."""
+        v = Vector([3, 4, 5])
+        assert repr(v) == 'Vector([3.0, 4.0, 5.0])'
 
+        v = Vector(range(10))
+        assert 'Vector(' in repr(v)
+        assert '[0.0, 1.0, ...' in repr(v)
+        assert '9.0]' in repr(v)
 
-def test_vector_iteration():
-    """Test vector iteration and unpacking."""
-    v = Vector([3.0, 4.0])
-    x, y = v
-    assert x == 3.0
-    assert y == 4.0
+    def test_str(self):
+        """Test string conversion."""
+        v = Vector([3, 4, 5])
+        assert str(v) == '(3.0, 4.0, 5.0)'
 
-    components = list(v)
-    assert components == [3.0, 4.0]
+    def test_len(self):
+        """Test length method."""
+        v = Vector([3, 4, 5])
+        assert len(v) == 3
 
+        v = Vector([])
+        assert len(v) == 0
 
-def test_vector_equality():
-    """Test vector equality comparison."""
-    v1 = Vector([3.0, 4.0])
-    v2 = Vector([3.0, 4.0])
-    v3 = Vector([3.0, 4.0, 0.0])
+    def test_iter(self):
+        """Test iteration over Vector components."""
+        v = Vector([3, 4, 5])
+        components = list(v)
+        assert components == [3.0, 4.0, 5.0]
 
-    assert v1 == v2
-    assert v1 != v3
-    assert v1 != v3
-
-
-def test_vector_magnitude():
-    """Test vector magnitude calculation."""
-    v = Vector([3.0, 4.0])
-    assert abs(v) == 5.0
-
-    v_zero = Vector([0.0, 0.0])
-    assert abs(v_zero) == 0.0
+        # Test unpacking
+        x, y, z = v
+        assert (x, y, z) == (3.0, 4.0, 5.0)
 
 
-def test_vector_bool():
-    """Test vector boolean evaluation."""
-    v = Vector([3.0, 4.0])
-    assert bool(v) is True
+class TestVectorEquality:
+    """Test Vector equality and hashing."""
 
-    v_zero = Vector([0.0, 0.0])
-    assert bool(v_zero) is False
+    def test_equality(self):
+        """Test equality between Vectors."""
+        v1 = Vector([3, 4, 5])
+        v2 = Vector([3, 4, 5])
+        v3 = Vector([3, 4])
+        v4 = Vector([3, 4, 6])
 
+        assert v1 == v2
+        assert v1 != v3
+        assert v1 != v4
+        assert v1 != (3, 4, 5)  # Different type
 
-def test_vector_indexing():
-    """Test vector indexing and slicing."""
-    v = Vector([1.0, 2.0, 3.0, 4.0, 5.0])
+    def test_hash(self):
+        """Test Vector hashing for dict/set usage."""
+        v1 = Vector([3, 4, 5])
+        v2 = Vector([3, 4, 5])
+        v3 = Vector([5, 4, 3])
 
-    # Test individual element access
-    assert v[0] == 1.0
-    assert v[-1] == 5.0
+        assert hash(v1) == hash(v2)
+        assert hash(v1) != hash(v3)
 
-    # Test slicing
-    v_slice = v[1:4]
-    assert isinstance(v_slice, Vector)
-    assert len(v_slice) == 3
-    assert list(v_slice) == [2.0, 3.0, 4.0]
-
-
-def test_vector_attribute_access():
-    """Test vector attribute access (x, y, z, t)."""
-    v = Vector([1.0, 2.0, 3.0, 4.0])
-    assert v.x == 1.0
-    assert v.y == 2.0
-    assert v.z == 3.0
-    assert v.t == 4.0
-
-    with pytest.raises(AttributeError):
-        _ = v.invalid_attribute
+        # Test using Vectors as dict keys
+        d = {v1: 'v1', v3: 'v3'}
+        assert d[v2] == 'v1'  # v2 is equal to v1
 
 
-def test_vector_angles():
-    """Test vector angle calculations."""
-    v = Vector([1.0, 1.0])
-    assert math.isclose(v.angle(1), math.pi / 4, rel_tol=1e-9)
+class TestVectorMagnitude:
+    """Test Vector magnitude and boolean conversion."""
 
-    v2 = Vector([1.0, 1.0, 1.0])
-    angles = list(v2.angles())
-    assert len(angles) == 2
+    def test_abs(self):
+        """Test Vector magnitude calculation."""
+        v = Vector([3, 4])
+        assert abs(v) == 5.0
 
+        v = Vector([3, 4, 5])
+        assert abs(v) == math.sqrt(3**2 + 4**2 + 5**2)
 
-def test_vector_formatting():
-    """Test vector formatting options."""
-    v = Vector([1.0, 2.0])
+    def test_bool(self):
+        """Test boolean conversion."""
+        v = Vector([3, 4, 5])
+        assert bool(v) is True
 
-    # Test default formatting
-    assert format(v) == '(1.0, 2.0)'
-
-    # Test hyperspherical coordinates
-    v_h = format(v, '.2fh')
-    assert '<' in v_h and '>' in v_h
+        v = Vector([0, 0, 0])
+        assert bool(v) is False
 
 
-def test_vector_bytes():
-    """Test vector serialization and deserialization."""
-    v1 = Vector([1.0, 2.0, 3.0])
-    b = bytes(v1)
-    v2 = Vector.frombytes(b)
+class TestVectorAttributeAccess:
+    """Test access to Vector components via attributes."""
 
-    assert v1 == v2
+    def test_getitem(self):
+        """Test item access."""
+        v = Vector([3, 4, 5])
+        assert v[0] == Vector([3.0])
+        assert v[1] == Vector([4.0])
+        assert v[-1] == Vector([5.0])
+
+        with pytest.raises(IndexError):
+            _ = v[3]
+
+    def test_slicing(self):
+        """Test Vector slicing."""
+        v = Vector([3, 4, 5, 6])
+        assert v[1:3] == Vector([4.0, 5.0])
+        assert v[1:] == Vector([4.0, 5.0, 6.0])
+        assert v[:2] == Vector([3.0, 4.0])
+
+    def test_getattr(self):
+        """Test attribute access for x, y, z, t."""
+        v = Vector([3, 4, 5, 6])
+        assert v.x == 3.0
+        assert v.y == 4.0
+        assert v.z == 5.0
+        assert v.t == 6.0
+
+        with pytest.raises(AttributeError):
+            _ = v.a  # Not a predefined attribute
+
+        v = Vector([3])
+        assert v.x == 3.0
+        with pytest.raises(AttributeError):
+            _ = v.y  # Out of range
 
 
-def test_vector_hash():
-    """Test vector hashing."""
-    v1 = Vector([1.0, 2.0])
-    v2 = Vector([1.0, 2.0])
-    v3 = Vector([2.0, 1.0])
+class TestVectorSerialization:
+    """Test Vector serialization and deserialization."""
 
-    # Same vectors should have same hash
-    assert hash(v1) == hash(v2)
-    # Different vectors should have different hashes
-    assert hash(v1) != hash(v3)
+    def test_bytes_roundtrip(self):
+        """Test conversion to bytes and back."""
+        v1 = Vector([3, 4, 5])
+        b = bytes(v1)
+        v2 = Vector.frombytes(b)
+        assert v1 == v2
 
-    # Test vector as dictionary key
-    d = {v1: 'test'}
-    assert d[v2] == 'test'  # v2 equals v1, so this should work
-
-
-def test_vector_errors():
-    """Test error conditions."""
-    with pytest.raises(TypeError):
-        Vector(['not', 'a', 'number'])  # type: ignore
-
-    v = Vector([1.0, 2.0])
-    with pytest.raises(IndexError):
-        _ = v[2]  # Index out of range
-
-    with pytest.raises(AttributeError):
-        _ = v.w  # Invalid attribute
+    def test_pickle_roundtrip(self):
+        """Test pickling and unpickling."""
+        v1 = Vector([3, 4, 5])
+        data = pickle.dumps(v1)
+        v2 = pickle.loads(data)
+        assert v1 == v2
 
 
-# Optional: Add parametrized tests for testing multiple input cases
-@pytest.mark.parametrize(
-    'components,expected_magnitude',
-    [
-        ([3.0, 4.0], 5.0),
-        ([1.0, 1.0], math.sqrt(2)),
-        ([1.0, 0.0], 1.0),
-        ([0.0, 0.0], 0.0),
-    ],
-)
-def test_vector_magnitudes(components, expected_magnitude):
-    """Test vector magnitude calculations with various inputs."""
-    v = Vector(components)
-    assert math.isclose(abs(v), expected_magnitude, rel_tol=1e-9)
+class TestVectorAngles:
+    """Test Vector angle calculations."""
+
+    def test_angle_2d(self):
+        """Test angle calculation in 2D."""
+        v = Vector([1.0, 0.0])
+        assert v.angle(1) == 0.0
+
+        v = Vector([0.0, 1.0])
+        assert v.angle(1) == math.pi / 2
+
+        v = Vector([-1.0, 0.0])
+        assert v.angle(1) == math.pi
+
+        v = Vector([0.0, -1.0])
+        assert v.angle(1) == 3 * math.pi / 2
+
+    def test_angles(self):
+        """Test generating all angles."""
+        v = Vector([3.0, 4.0, 5.0])
+        angles = list(v.angles())
+        assert len(angles) == 2
+        assert angles[0] == math.atan2(math.hypot(4.0, 5.0), 3.0)
+
+
+class TestVectorFormatting:
+    """Test Vector formatting."""
+
+    def test_default_format(self):
+        """Test default formatting."""
+        v = Vector([3, 4])
+        assert format(v) == '(3.0, 4.0)'
+
+    def test_custom_format(self):
+        """Test formatting with format specifiers."""
+        v = Vector([3, 4])
+        assert format(v, '.2f') == '(3.00, 4.00)'
+        assert format(v, '.0f') == '(3, 4)'
+
+    def test_hyperspherical_format(self):
+        """Test hyperspherical format."""
+        v = Vector([1, 1])
+        # Magnitude is sqrt(2), angle is pi/4
+        assert format(v, '.2fh') == '<1.41, 0.79>'
+
+
+class TestVectorOperators:
+    """Test Vector operator overloading."""
+
+    def test_negation(self):
+        """Test unary negation."""
+        v = Vector([3, 4, 5])
+        negative = -v
+        assert negative == Vector([-3, -4, -5])
+
+    def test_positive(self):
+        """Test unary positive."""
+        v = Vector([3, 4, 5])
+        assert +v is v  # Should return self
+
+    def test_addition(self):
+        """Test Vector addition."""
+        v1 = Vector([3, 4, 5])
+        v2 = Vector([6, 7, 8])
+        assert v1 + v2 == Vector([9, 11, 13])
+
+        # Test with different sizes
+        v3 = Vector([6, 7])
+        assert v1 + v3 == Vector([9, 11, 5])
+        assert v3 + v1 == Vector([9, 11, 5])
+
+        # Test with other iterables
+        assert v1 + [6, 7, 8] == Vector([9, 11, 13])
+        assert [6, 7, 8] + v1 == Vector([9, 11, 13])  # Tests __radd__
+
+    def test_scalar_multiplication(self):
+        """Test scalar multiplication."""
+        v = Vector([3, 4, 5])
+        assert v * 2 == Vector([6, 8, 10])
+        assert 2 * v == Vector([6, 8, 10])  # Tests __rmul__
+
+        # Test with float
+        assert v * 0.5 == Vector([1.5, 2.0, 2.5])
+
+        # Test with invalid types
+        with pytest.raises(TypeError):
+            _ = v * '2'
+
+    def test_matmul(self):
+        """Test matrix multiplication (dot product)."""
+        v1 = Vector([3, 4, 5])
+        v2 = Vector([6, 7, 8])
+        assert v1 @ v2 == 3 * 6 + 4 * 7 + 5 * 8
+        assert v2 @ v1 == 3 * 6 + 4 * 7 + 5 * 8  # Tests __rmatmul__
+
+        # Test with other iterables
+        assert v1 @ [6, 7, 8] == 3 * 6 + 4 * 7 + 5 * 8
+        assert [6, 7, 8] @ v1 == 3 * 6 + 4 * 7 + 5 * 8
+
+        # Test with size mismatch
+        with pytest.raises(ValueError):
+            _ = v1 @ Vector([6, 7])
+
+        # Test with invalid types
+        with pytest.raises(TypeError):
+            _ = v1 @ 2
+
+
+class TestVectorAdvanced:
+    """Advanced Vector tests."""
+
+    def test_vector_in_multidimensional_space(self):
+        """Test a Vector in a high-dimensional space."""
+        dimensions = 10
+        components = list(range(dimensions))
+        v = Vector(components)
+
+        assert len(v) == dimensions
+        assert abs(v) == math.sqrt(sum(i * i for i in range(dimensions)))
