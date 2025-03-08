@@ -13,8 +13,7 @@ import math
 import operator
 import reprlib
 from array import array
-from collections import abc
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator, Sized
 from typing import Any
 
 
@@ -34,7 +33,7 @@ class Vector:
     Methods:
         __init__(self, components: Iterable[float]) -> None:
             Initialize a vector with the given components.
-        __iter__(self):
+        __iter__(self) -> Iterator:
             Return an iterator over the vector components.
         __repr__(self) -> str:
             Return a string representation of the vector.
@@ -42,7 +41,7 @@ class Vector:
             Return a string representation of the vector.
         __bytes__(self) -> bytes:
             Return a bytes object representing the vector.
-        __eq__(self, other) -> bool:
+        __eq__(self, other: Any) -> bool:
             Check if two vectors are equal.
         __hash__(self) -> int:
             Compute the hash value for the object.
@@ -54,47 +53,49 @@ class Vector:
             Return the number of components in the vector.
         __getitem__(self, key: int | slice) -> Any:
             Retrieve an item or a slice from the vector.
-        __getattr__(self, name: str) -> Any:
+        __getattr__(self, name: str) -> float:
             Retrieve the attribute specified by 'name'.
         angle(self, n: int) -> float:
             Calculate the angle at the nth dimension of the vector.
-        angles(self):
+        angles(self) -> Iterator:
             Generate an iterable of angles for each element in the vector.
         __format__(self, format_spec: str='') -> str:
             Format the vector according to the given format specification.
         frombytes(cls, octets: bytes) -> 'Vector':
             Create a Vector instance from a bytes object.
-        __neg__(self):
+        __neg__(self) -> 'Vector':
             Return the negation of the vector.
-        __pos__(self):
+        __pos__(self) -> 'Vector':
             Return the vector itself.
-        __add__(self, other):
+        __add__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
             Return the sum of two vectors.
-        __radd__(self, other):
+        __radd__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
             Return the sum of two vectors.
-        __mul__(self, scalar):
+        __mul__(self, scalar: float) -> 'Vector':
             Return the product of the vector and a scalar.
-        __rmul__(self, scalar):
+        __rmul__(self, scalar: float) -> 'Vector':
             Implements the right multiplication operation for the vector.
-        __matmul__(self, other):
+        __matmul__(self, other: 'Vector' | Iterable[float]) -> float:
             Implements dot product for two vectors using the @ infix operator.
-        __rmatmul__(self, other):
+        __rmatmul__(self, other: 'Vector' | Iterable[float]) -> float:
             Implements dot product for two vectors.
     """
 
     typecode = 'd'
     __match_args__ = ('x', 'y', 'z', 't')
 
+    # Note that int is compatible with float. So both iterables of ints and
+    # floats can be passed.
     def __init__(self, components: Iterable[float]) -> None:
         """Initialize a vector with the given components.
 
         Args:
             components (iterable): An iterable of numerical values
-            representing the vector components.
+                    representing the vector components.
         """
         self._components = array(self.typecode, components)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         """Return an iterator over the x and y coordinates.
 
         __iter__ makes a Vector iterable; this is what makes unpacking work
@@ -105,7 +106,7 @@ class Vector:
         """
         return iter(self._components)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of the vector.
 
         __repr__ builds a string by interpolating the components with {!r} to
@@ -151,25 +152,25 @@ class Vector:
         """
         return bytes([ord(self.typecode)]) + bytes(self._components)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """Check if two vectors are equal.
 
         An example of Goose typing. Relies on runtime type checking of objects
         against ABCs.
 
         Args:
-            other (Vector): The vector to compare with.
+            other (Any): The vector to compare with.
 
         Returns:
             bool: True if the vectors have the same length and all
-            corresponding elements are equal, False otherwise.
+                    corresponding elements are equal, False otherwise.
         """
         if isinstance(other, Vector):
             return all(a == b for a, b in zip(self, other, strict=True))
         else:
             return NotImplemented
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Compute the hash value for the object.
 
         This method generates a hash value by applying the XOR operation
@@ -183,7 +184,7 @@ class Vector:
         Returns:
             int: The computed hash value.
         """
-        hashes = (hash(x) * (i + 1) for i, x in enumerate(self))
+        hashes = (hash(x) for x in self)
         return functools.reduce(operator.xor, hashes, 0)
 
     def __abs__(self) -> float:
@@ -215,11 +216,12 @@ class Vector:
         which means it supports all the sequence protocol methods. This is
         important because it makes Vector 'sliceable'.
 
+        Returns:
             int: The number of components.
         """
         return len(self._components)
 
-    def __getitem__(self, key: int | slice) -> Any:
+    def __getitem__(self, key: int | slice):
         """Retrieve an item or a slice from the vector.
 
         Adding the __len__ and the __getitem__ makes Vector a sequence type,
@@ -230,20 +232,19 @@ class Vector:
             key (int or slice): The index or slice to retrieve.
 
         Returns:
-            The element at the specified index if key is an int, or a new
-            instance of the vector containing the elements in the specified
-            slice if key is a slice.
+            Vector: a new instance of the vector containing the elements in t
+            he specified slice or key.
 
         Raises:
             TypeError: If the key is not an int or slice.
         """
+        cls = type(self)
         if isinstance(key, slice):
-            cls = type(self)
             return cls(self._components[key])
         index = operator.index(key)
-        return self._components[index]
+        return cls([self._components[index]])
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> float:
         """Retrieve the attribute specified by 'name'.
 
         This method enables us to retrieve values using the my_vector.x,
@@ -260,7 +261,7 @@ class Vector:
             name (str): The name of the attribute to retrieve.
 
         Returns:
-            Any: The value of the attribute if found in '_components'.
+            float: The value of the attribute if found in '_components'.
 
         Raises:
             AttributeError: If the attribute is not found in '__match_args__'
@@ -291,14 +292,14 @@ class Vector:
             - If n is the last dimension and the last element of the vector is
                 negative, the angle is adjusted to be in the correct quadrant.
         """
-        r = math.hypot(*self[n:])
-        a = math.atan2(r, self[n - 1])
-        if (n == len(self) - 1) and (self[-1] < 0):
+        r = math.hypot(*self[n:]._components)
+        a = math.atan2(r, *self[n - 1]._components)
+        if (n == len(self) - 1) and (self[-1]._components[0] < 0):
             return math.pi * 2 - a
         else:
             return a
 
-    def angles(self):
+    def angles(self) -> Iterator:
         """Generate an iterable of angles for each element in the vector.
 
         Returns:
@@ -362,7 +363,7 @@ class Vector:
     # Operator overloading with unary operators. Special methods implementing
     # unary operators should never change the value of the operands. Always
     # return a new object.
-    def __neg__(self):
+    def __neg__(self) -> 'Vector':
         """Return the negation of the vector.
 
         This method returns a new vector where each component is the negation
@@ -373,7 +374,7 @@ class Vector:
         """
         return Vector(-x for x in self)
 
-    def __pos__(self):
+    def __pos__(self) -> 'Vector':
         """Return the vector itself.
 
         This method returns the vector itself.
@@ -386,11 +387,11 @@ class Vector:
     # Operator overloading with infix operators. Special methods implementing
     # unary operators should never change the value of the operands. Always
     # return a new object.
-    def __add__(self, other):
+    def __add__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
         """Return the sum of two vectors.
 
         Args:
-            other (Vector): The vector to add.
+            other (Vector | Iterable): The vector to add.
 
         Returns:
             Vector: A new vector with the sum of the two vectors.
@@ -401,7 +402,7 @@ class Vector:
         except TypeError:
             return NotImplemented
 
-    def __radd__(self, other):
+    def __radd__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
         """Return the sum of two vectors.
 
         Logic for when __radd__ is called:
@@ -418,21 +419,22 @@ class Vector:
         type message.
 
         Args:
-            other (Vector): The vector to add.
+            other (Vector | Iterable): The vector to add.
 
         Returns:
             Vector: A new vector with the sum of the two vectors.
         """
         return self + other
 
-    def __mul__(self, scalar):
+    def __mul__(self, scalar: float) -> 'Vector':
         """Return the product of the vector and a scalar.
 
         Args:
             scalar (float): The scalar to multiply by.
 
         Returns:
-            Vector: A new vector with each component multiplied by the scalar.
+            Vector: A new vector with each component multiplied by
+                    the scalar.
         """
         try:
             factor = float(scalar)
@@ -440,12 +442,12 @@ class Vector:
             return NotImplemented
         return Vector(x * factor for x in self)
 
-    def __rmul__(self, scalar):
+    def __rmul__(self, scalar: float) -> 'Vector':
         """Implements the right multiplication operation for the vector.
 
         Args:
             scalar (float or int): The scalar value to multiply with the
-            vector.
+                    vector.
 
         Returns:
             Vector: A new vector that is the result of the scalar
@@ -453,31 +455,31 @@ class Vector:
         """
         return self * scalar
 
-    def __matmul__(self, other):
+    def __matmul__(self, other: 'Vector' | Iterable[float]) -> float:
         """Implements dot product for two vectors using the @ infix operator.
 
         Uses "Goose typing". Relies on runtime type checking of objects
         against ABCs.
 
         Args:
-            other (Vector): The vector to multiply with.
+            other (Vector | Iterable): The vector to multiply with.
 
         Returns:
             float: The result the dot product of the two vectors.
         """
-        if isinstance(other, abc.Sized) and isinstance(other, abc.Iterable):
+        if isinstance(other, Sized) and isinstance(other, Iterable):
             return sum(a * b for a, b in zip(self, other, strict=True))
         else:
             return NotImplemented
 
-    def __rmatmul__(self, other):
+    def __rmatmul__(self, other: 'Vector' | Iterable[float]) -> float:
         """Implements dot product for two vectors.
 
         Uses "Goose typing". Relies on runtime type checking of objects
         against ABCs.
 
         Args:
-            other (Vector): The vector to multiply with.
+            other (Vector | Iterable): The vector to multiply with.
 
         Returns:
             float: The result the dot product of the two vectors.
