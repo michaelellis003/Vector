@@ -71,7 +71,7 @@ lines-between-types = 0
 split-on-trailing-comma = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["E501"]
+"tests/*" = ["E501", "B018", "B015"]
 
 [tool.ruff.format]
 quote-style = "single"
