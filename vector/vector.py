@@ -67,17 +67,17 @@ class Vector:
             Return the negation of the vector.
         __pos__(self) -> 'Vector':
             Return the vector itself.
-        __add__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
+        __add__(self, other: 'Vector') -> 'Vector':
             Return the sum of two vectors.
-        __radd__(self, other: 'Vector' | Iterable[float]) -> 'Vector':
+        __radd__(self, other: 'Vector') -> 'Vector':
             Return the sum of two vectors.
         __mul__(self, scalar: float) -> 'Vector':
             Return the product of the vector and a scalar.
         __rmul__(self, scalar: float) -> 'Vector':
             Implements the right multiplication operation for the vector.
-        __matmul__(self, other: 'Vector' | Iterable[float]) -> float:
+        __matmul__(self, other: 'Vector') -> float:
             Implements dot product for two vectors using the @ infix operator.
-        __rmatmul__(self, other: 'Vector' | Iterable[float]) -> float:
+        __rmatmul__(self, other: 'Vector') -> float:
             Implements dot product for two vectors.
     """
 
